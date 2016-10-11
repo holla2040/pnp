@@ -1,0 +1,39 @@
+#usage  "<b>Pick and Place Gcode v1.0</b>\n"
+        "<p>"
+        "Creates gcode for a Tinyg to simulate placing."
+        "<p>"
+        "<author>Author: matthew@cashdollar.org</author>"
+ 
+if (board) board(B) {
+    string fileName = dlgFileSave("Save File", filesetext(B.name, ".cnc"), "*.cnc");
+    if (fileName == "")
+        exit(0);
+ 
+    output(fileName) {
+        printf("G17\n");            // X/Y Plane
+        printf("G21\n");            // Use millimeters
+        printf("G92 X0 Y0 Z0\n");   // Set the current position as home
+        printf("F1600.0\n");        // Set feed rate (movement speed)
+        B.elements(E) if (E.populate) {
+            // Verify that it is an SMD component
+            int isSmd = 0;
+            E.package.contacts(C) {
+                if (C.smd && C.smd.layer == 1)
+                    isSmd = 1;
+            }
+            // For each part, simulate moving from home, taking it to a
+            // position, and dropping it.
+            if (isSmd == 1) {           
+                printf("# Place SMD Element: %s\n", E.name);
+                printf("G0 X%f Y%f\n", u2mm(E.x), u2mm(E.y));   // goto position
+                printf("G1 Z-75\n");                            // lower vac
+                printf("G4 P1\n");                              // pause 1 sec
+                printf("G1 Z75\n");                             // raise vac
+                printf("G28\n");                                // Return home
+            }
+        }
+    }
+} else {
+    dlgMessageBox("Start this ULP with a Board open");
+    exit(0);
+}
